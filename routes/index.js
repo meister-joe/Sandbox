@@ -1,9 +1,9 @@
 var express = require('express');
 var router = express.Router();
 
-/* GET home page. */
+/* Home page - Swagger Documentation. */
 router.get('/', function (req, res, next) {
-  res.redirect('/index.html');
+  res.redirect('/api-docs');
 });
 
 module.exports = router;
