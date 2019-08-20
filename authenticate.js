@@ -45,6 +45,7 @@ exports.company = (req, res, next) => {
         .then((company) => {
             if (company) {
                 if (company.active) {
+                    res.company = company;
                     next();
                 } else {
                     res.statusCode = 403;

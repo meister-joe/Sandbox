@@ -2,6 +2,7 @@ var express = require('express');
 const bodyParser = require('body-parser');
 var passport = require('passport');
 var auth = require('../authenticate');
+var utils = require('../utils');
 const cors = require('./cors');
 
 var User = require('../models/user');
@@ -28,9 +29,9 @@ router.use(bodyParser.json());
 *     parameters:
  *       - in: path
  *         name: defaultCompanyId
- *         schema:
- *           type: string
- *           default: 'whoisi'
+ *         description: Defaults to 'whoisi'
+ *         type: string
+ *         default: 'whoisi'
  *     responses:
  *       '200':
  *         description: Username and companyId of the logged in user 
@@ -65,10 +66,8 @@ router.get('/whoisi', auth.user, cors.cors, function (req, res) {
  *       - in: path
  *         name: companyId
  *         description: Company Id of which the user takes part of
- *         schema:
- *           type: string
- *         required:
- *           - companyId
+ *         type: string
+ *         required: true
  *     responses:
  *       '200':
  *         description: Users of the given companyId
@@ -103,10 +102,9 @@ router.get('/', cors.cors, auth.user, auth.admin, auth.company, function (req, r
  *     parameters:
  *       - in: path
  *         name: companyId
- *         schema:
- *           type: string
- *         required:
- *           - companyId
+ *         description: Company Id of which the user takes part of
+ *         type: string
+ *         required: true
  *       - name: body
  *         in: body
  *         schema:
@@ -152,9 +150,7 @@ router.post('/', cors.cors, (req, res, next) => {
         User.register(new User({ username: req.body.username }),
           req.body.password, (err, user) => {
             if (err) {
-              res.statusCode = 500;
-              res.setHeader('Content-Type', 'application/json');
-              res.json({ err: err });
+              utils.createError(res, 500, err);
             }
             else {
               if (req.body.firstName)
@@ -167,9 +163,7 @@ router.post('/', cors.cors, (req, res, next) => {
                 user.companyId = req.params.companyId;
               user.save((err, user) => {
                 if (err) {
-                  res.statusCode = 500;
-                  res.setHeader('Content-Type', 'application/json');
-                  res.json({ message: err });
+                  utils.createError(res, 500, err);
                   return;
                 }
                 passport.authenticate('local')(req, res, () => {
@@ -181,10 +175,9 @@ router.post('/', cors.cors, (req, res, next) => {
             }
           }
         );
-      } else { // PIN not ok
-        res.statusCode = 403;
-        res.setHeader('Content-Type', 'application/json');
-        res.json({ message: 'PIN code wrong. You cannot register for this company' });
+      } else { 
+        // PIN not ok
+        utils.createError(res, 403, 'PIN code wrong. You cannot register for this company');
       }
     }, (err) => next(err))
     .catch((err) => next(err));
@@ -206,10 +199,8 @@ router.post('/', cors.cors, (req, res, next) => {
  *     parameters:
  *       - in: path
  *         name: companyId
- *         schema:
- *           type: string
-*         required:
- *           - companyId
+ *         type: string
+ *         required: true
  *       - name: body
  *         in: body
  *         schema:
@@ -237,21 +228,17 @@ router.post('/login', cors.cors, (req, res, next) => {
       return next(err);
 
     if (!user) {
-      res.statusCode = 401;
-      res.setHeader('Content-Type', 'application/json');
-      res.json({ message: 'Login Unsuccessful!' });
+      utils.createError(res, 401, 'Login Unsuccessful!');
     }
     req.logIn(user, (err) => {
       if (err) {
-        res.statusCode = 401;
-        res.setHeader('Content-Type', 'application/json');
-        res.json({ message: 'Login Unsuccessful!' });
+        utils.createError(res, 401, 'Login Unsuccessful!');
       }
 
       var token = auth.getToken({ _id: req.user._id });
       res.statusCode = 200;
       res.setHeader('Content-Type', 'application/json');
-      res.json({ message: 'Login Successful!', token: token });
+      res.json({ token: token });
     });
   })(req, res, next);
 });

@@ -22,8 +22,16 @@ var company = new Schema({
     type: String,
     required: true
   },
-  companyEndpoint: {
+  serverInformationEndpoint: {
     type: String,
+    required: false
+  },
+  keyForServerInformationEndpoint: {
+    type: String,
+    required: false
+  },
+  topics: {
+    type: Array,
     required: false
   },
   companyImage: {

@@ -2,5 +2,10 @@ module.exports = {
     'secretKey': '',
     'mongoUrl': '',
     'subscriptionKey': '',
-    'url': ''
+    'url': '',
+    'companyName': '',
+    'IATACargoAgentCode': '',
+    'cacheFor': 0,
+    'serverOwnSecret': '',
+    'keyForServerInformation': ''
 }
