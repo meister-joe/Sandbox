@@ -5,6 +5,10 @@ var jsonld = new Schema({
     lo: {
         type: Object,
         required: true
+    },
+    topic: {
+        type: String,
+        required: true
     }
 }, {
         timestamps: true

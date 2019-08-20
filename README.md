@@ -6,14 +6,24 @@ Before deploying the server, you will need to update the `config.js` file with t
    
     'secretKey': 'somesecretkeyforJWTencryption'
     'mongoUrl': 'mongodb://user:password@url:port/database',
-    'subscriptionKey': 'yoursubscriptionkey',
-    'url':'yourbaseurl'
-|Parameter       | Description                   |
-|----------------|-------------------------------|
-|secretKey       |This key will be used for JWT encryption            |
-|mongoUrl        |URL to your MongoDB database. Instructions on how to setup quickly a MongoDB environment below           |
-|subscriptionKey |In a subscriber - publisher scenario, this key needs to be sent when your server subscribes to another server's logistics objects. The publisher can `POST` to`/mySubscriptions` endpoint only if it has this key|
-|url             |Base URL of your server |
+    'subscriptionSecret': 'yoursubscriptionsecret',
+    'url':'yourbaseurl',
+    'companyName': 'yourcompanyname',
+    'IATACargoAgentCode': 'numericvalue',
+    'cacheFor': 'numericvalueinseconds',
+    'serverOwnSecret': 'secretNeededToAccessInternalResources',
+    'keyForServerInformation': 'keyForAccessingServerInformationEndpoint'
+|Parameter         | Description                   |
+|------------------|-------------------------------|
+|secretKey         |This key will be used for JWT encryption            |
+|mongoUrl          |URL to your MongoDB database. Instructions on how to setup quickly a MongoDB environment below           |
+|subscriptionSecret   |In a subscriber - publisher scenario, this key needs to be sent when your server subscribes to another server's logistics objects. The publisher can `POST` to`/callbackUrl` endpoint only if it has this key|
+|url               |Base URL of your server in the Internet of Logistics|
+|companyName       |Name of your company |
+|IATACargoAgentCode|IATA Cargo Agent Code of your server |
+|cacheFor          |Amount of time in seconds for which the subscription information can be cached |
+|serverOwnSecret   |Secret needed to access internal endpoints |
+|keyForServerInformation   |Key needed in order to access serverInformation endpoint |
 
 # Local testing
 For testing the application locally, follow the next steps:

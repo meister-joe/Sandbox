@@ -1,22 +1,22 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 var auth = require('../authenticate');
+var config = require('../config');
+var utils = require('../utils');
 const cors = require('./cors');
 
 const companyRouter = express.Router();
 var userRouter = require('./userRouter');
 var loRouter = require('./loRouter');
-var subscriptionRouter = require('./subscriptionRouter');
 
 companyRouter.use(bodyParser.json());
 companyRouter.use('/:companyId/users', userRouter);
 companyRouter.use('/:companyId/los', loRouter);
-companyRouter.use('/:companyId/subscriptions', subscriptionRouter);
 
 const Company = require('../models/company');
 
 /**
- * NOT on swagger documentation
+ * @swagger
  * /companies:
  *   get:
  *     tags:
@@ -24,40 +24,49 @@ const Company = require('../models/company');
  *     name: Find companies
  *     summary: Return all registered companies
  *     description: Return all registered companies. Protected endpoint. When you try out this API Swagger will automatically attach the Authentication header using the Bearer token you provided in the Authorize dialog.
- *     security:
- *       - bearerAuth: []
  *     consumes:
  *       - application/json
  *     produces:
  *       - application/json
+*     parameters:
+ *       - in: header
+ *         name: serverSecret
+ *         description: Server specific key from the server's configuration file.
+ *         type: string
+ *         required: true
  *     responses:
  *       '200':
  *         description: List of registered companies (companyName, companyId, endpoint)
- *       '401':
- *         description: Not authenticated
+ *       '403':
+ *         description: Forbidden to access this resource
  *       '500':
  *         description: Internal Server Error
  */
 companyRouter.route('/')
   .options(cors.cors, (req, res) => { res.sendStatus(200); })
-  .get(cors.cors, auth.user, (req, res, next) => {
-    Company.find({})
-      .then((companies) => {
-        res.statusCode = 200;
-        res.setHeader('Content-Type', 'application/json');
-        var i = companies.length;
-        var out = [];
-        while (i--) {
-          out[i] = {
-            "companyName": companies[i].companyName,
-            "companyId": companies[i].companyId,
-            "endpoint": companies[i].companyEndpoint
+  .get(cors.cors, (req, res, next) => {
+    if (req.headers.serversecret === config.serverOwnSecret) {
+      Company.find({})
+        .then((companies) => {
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          var i = companies.length;
+          var out = [];
+          while (i--) {
+            out[i] = {
+              "companyName": companies[i].companyName,
+              "companyId": companies[i].companyId,
+              "endpoint": companies[i].serverInformationEndpoint
+            }
           }
-        }
-        res.json(out);
-      }, (err) => next(err))
-      .catch((err) => next(err));
-  }); 
+          res.json(out);
+        }, (err) => next(err))
+        .catch((err) => next(err));
+
+    } else {
+      utils.createError(res, 403, 'Forbidden to retrieve registered companies on this server');
+    }
+  });
 
 /**
  * @swagger
@@ -77,11 +86,9 @@ companyRouter.route('/')
  *     parameters:
  *       - in: path
  *         name: companyId
- *         description: companyId
- *         schema:
- *           type: string
- *         required:
- *           - companyId
+ *         description: Id of the company
+ *         type: string
+ *         required: true
  *     responses:
  *       '200':
  *         description: A single company object
@@ -107,20 +114,18 @@ companyRouter.route('/:company')
             contactName: company.contactName,
             contactEmail: company.contactEmail,
             companyType: company.companyType,
-            companyEndpoint: company.companyEndpoint,
+            serverInformationEndpoint: company.serverInformationEndpoint,
+            keyForServerInformationEndpoint: company.keyForServerInformationEndpoint,
+            topics: company.topics,
             companyImage: company.companyImage,
             companyDescription: company.companyDescription
           });
         } else {
-          res.statusCode = 403;
-          res.setHeader('Content-Type', 'application/json');
-          res.json({ message: 'Cannot retrieve logistics object: this company is not the one under which the logged in user is registered.' });
+          utils.createError(res, 403, 'Cannot retrieve logistics object: this company is not the one under which the logged in user is registered.');
         }
       }, (err) => next(err))
       .catch((err) => {
-        res.statusCode = 400;
-        res.setHeader('Content-Type', 'application/json');
-        res.json({ message: 'Bad request.' });
+        utils.createError(res, 400, 'Bad Request.');
         return;
       });
   });
@@ -147,34 +152,45 @@ companyRouter.route('/:company')
  *           type: object
  *           properties:
  *             companyName:
+ *               required: true
  *               type: string
  *             companyId:
+ *               required: true
  *               type: string
  *               description: The company ID is a unique string that identifies your company in the sandbox. Please use lowercase, no spaces and only alphanumeric charactes
  *             companyType:
  *               type: string
+ *               required: true
  *               description: One of the following types - shipper, forwarder, airline, handler, customs, trucking, warehouse, salesagent.
  *               enum: [shipper, forwarder, airline, handler, customs, trucking, warehouse, salesagent]
  *             contactName:
+ *               required: true
  *               type: string
  *             contactEmail:
+ *               required: true
  *               type: string
  *             companyImage:
  *               type: string
  *             companyDescription:
  *               type: string
- *             companyEndpoint:
+ *             serverInformationEndpoint:
+ *               required: false
+ *               description: Endpoint of the company in the Internet of Logistics of format https://mycompanyonerecordserver.org/serverInformation
  *               type: string
+ *             keyForServerInformationEndpoint:
+ *               required: false
+ *               description: Key for accessing the serverInformationEndpoint
+ *               type: string
+ *             topics:
+ *               required: false
+ *               description: Topics that the company would be interested in.
+ *               type: array
+ *               items:
+ *                 type: string
+ *                 enum: [Airwaybill, Housemanifest, Housewaybill, Booking]
  *             companyPin:
+ *               required: true
  *               type: string
- *         required:
- *           - companyEndpoint
- *           - contactName
- *           - contactEmail
- *           - companyType
- *           - companyName
- *           - companyId
- *           - companyPin
  *     responses:
  *       '201':
  *         description: Company created
@@ -197,9 +213,7 @@ companyRouter.route('/')
             }, (err) => next(err))
             .catch((err) => next(err));
         } else {
-          res.statusCode = 400;
-          res.setHeader('Content-Type', 'application/json');
-          res.json({ message: 'CompanyId already exists!' });
+          utils.createError(res, 400, 'CompanyId already exists!');
         }
       }, (err) => next(err))
       .catch((err) => next(err));
@@ -224,13 +238,12 @@ companyRouter.route('/')
 *       - in: path
 *         name: companyId
 *         description: Id of the company
-*         schema:
-*           type: string
-*         required:
-*           - companyId
+*         type: string
+*         required: true
 *       - name: body
 *         in: body
-*         description: Send only the fields that you want to modify.
+*         description: Send only the fields to modify
+*         required: true
 *         schema:
 *           type: object
 *           properties:
@@ -246,13 +259,22 @@ companyRouter.route('/')
 *               type: string
 *             companyDescription:
 *               type: string
+*             serverInformationEndpoint:
+*               type: string
+*             keyForServerInformationEndpoint:
+*               type: string
+*             topics:
+*               type: array
+*               items:
+*                 type: string
+*                 enum: [Airwaybill, Housemanifest, Housewaybill, Booking]
 *             companyPin:
 *               type: string
 *     responses:
 *       '200':
-*         description: Success
+*         description: Successfully updated the logistics object
 *       '401':
-*         description: No auth token / no user found in db with that name
+*         description: No auth token / no user found with that name
 *       '403':
 *         description: This company is not the one under which the logged in user is subscribed
 *       '500':
@@ -269,9 +291,7 @@ companyRouter.route('/:companyId')
       }, (err) => next(err))
         .catch((err) => next(err));
     } else {
-      res.statusCode = 403;
-      res.setHeader('Content-Type', 'application/json');
-      res.json({ message: 'Cannot update: this company is not the one under which the logged in user is subscribed.' });
+      utils.createError(res, 403, 'Cannot update: this company is not the one under which the logged in user is subscribed.');
     }
   });
 
@@ -294,10 +314,8 @@ companyRouter.route('/:companyId')
  *       - in: path
  *         name: companyId
  *         description: Id of the company
- *         schema:
- *           type: string
- *         required:
- *           - companyId
+ *         type: string
+ *         required: true
  *     responses:
  *       '200':
  *         description: Delete successful
@@ -324,15 +342,11 @@ companyRouter.route('/:company')
             }, (err) => next(err))
             .catch((err) => next(err));
         } else {
-          res.statusCode = 403;
-          res.setHeader('Content-Type', 'application/json');
-          res.json({ message: 'Cannot delete: this company is not the one under which the logged in user is subscribed.' });
+          utils.createError(res, 403, 'Cannot delete: this company is not the one under which the logged in user is subscribed.');
         }
       }, (err) => next(err))
       .catch((err) => {
-        res.statusCode = 404;
-        res.setHeader('Content-Type', 'application/json');
-        res.json({ message: 'CompanyId not found.' });
+        utils.createError(res, 404, 'CompanyId not found.');
         return;
       });
   });

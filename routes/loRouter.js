@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 var auth = require('../authenticate');
 var config = require('../config');
+var utils = require('../utils');
 var uuid = require('uuid');
 const cors = require('./cors');
 
@@ -12,7 +13,6 @@ loRouter.use(bodyParser.json());
 
 const Lo = require('../models/lo');
 const Company = require('../models/company');
-const Subscription = require('../models/subscription');
 
 /**
  * @swagger
@@ -33,15 +33,22 @@ const Subscription = require('../models/subscription');
  *     parameters:
  *       - in: path
  *         name: companyId
- *         schema:
- *           type: string
+ *         type: string
  *         required:
- *           - companyId
- *       - name: body
+ *           - true
+ *       - in: query
+ *         name: alertSubscribers
+ *         description: If the query parameter is set to true, possible subscribers will be asked if they want to subscribe to this logistics object. 
+ *         default: 'false'
+ *         type: boolean
+ *         required: true
+ *       - name: logisticsObject
  *         in: body
- *         description: Content of a logistics object (needs to be one of following types - Airwaybill, Housemanifest, Housewaybill, Booking). See more examples here - 
+ *         description: Content of a logistics object (needs to be one of following types - Airwaybill, Housemanifest, Housewaybill, Booking).
  *         schema:
  *           type: object
+ *         required:
+ *           - true
  *     responses:
  *       '201':
  *         description: Logistics object created successfully
@@ -55,55 +62,55 @@ const Subscription = require('../models/subscription');
  *         description: Company not found
  */
 loRouter.route('/')
-  .options(cors.cors, (req, res) => { res.sendStatus(200); })
+  .options(cors.cors, (res) => { res.sendStatus(200); })
   .post(cors.cors, auth.user, (req, res, next) => {
     Company.findOne({ companyId: req.params.companyId })
       .then((company) => {
         if (company.companyId === req.user.companyId) {
-          const id = req.body['@id'] ? req.body['@id'] : uuid.v4();
+          const randomId = uuid.v4();
+          const typeOfLo = req.body['@type'];
+          const url = req.body['@id'] ? req.body['@id'] : config.url + '/companies/' + req.params.companyId + '/los/' + randomId;
+          const id = req.body['@id'] ? getIdFromUrl(req.body['@id']) : randomId;
+
           var logisticsObjectContent = req.body;
 
-          if (!req.body['@type']) {
-            res.statusCode = 400;
-            res.setHeader('Content-Type', 'application/json');
-            res.json({ message: 'Logistics object should contain @type field: Airwaybill, Housemanifest, Housewaybill or Booking' });
+          if (!typeOfLo) {
+            utils.createError(res, 400, 'Logistics object should contain @type field: Airwaybill, Housemanifest, Housewaybill or Booking');
             return;
           };
 
-          if (!req.body['@url']) {
-            logisticsObjectContent.url = config.url + '/companies/' + req.params.companyId + '/los/' + id;
-          };
-
-          logisticsObjectContent['@id'] = id;
+          logisticsObjectContent['@id'] = url;
           var logisticsObject = new Lo({
             logisticsObject: logisticsObjectContent,
             companyId: req.params.companyId,
-            url: req.body['@url'] ? req.body['@url'] : config.url + '/companies/' + req.params.companyId + '/los/' + id,
-            type: req.body['@type'],
+            url: url,
+            type: typeOfLo,
             loId: id,
           });
 
-          // Notify subscribers which subscribed to this type of LO
-          Subscription.find({ documentType: req.body['@type'] }, function (err, subscribers) {
-            if (subscribers.length === 0) {
-              console.log("No subscribers for document type " + req.body['@type']);
-            } else {
-              for (i = 0; i < subscribers.length; i++) {
-                var json = {
-                  lo: req.body,
-                  subscriptionKey: subscribers[i].key
-                };
-
-                postContent(json, subscribers[i].subscriptionEndpoint);
+          if (req.query.alertSubscribers === 'true') {
+            // Notify subscribers which subscribed to this type of LO
+            // Iterate through the companies, find companies interested in the topic, 
+            //  and POST to serverInformationEndpoint in order to see if any company wants to subscribe to this LO
+            Company.find({ topics: typeOfLo })
+            .then((companies) => {
+              if (companies.length === 0) {
+                console.log("No companies found interested in topic " + typeOfLo);
+              } else {
+                for (i = 0; i < companies.length; i++) {
+                  if (companies[i].serverInformationEndpoint && companies[i].keyForServerInformationEndpoint) {
+                    getSubscriberInformation(companies[i], typeOfLo, function(data) {
+                      postContentToSubscriber(req.body, data, typeOfLo);
+                    });
+                  }
+                }
               }
-            }
-          });
+            });
+          }
 
           logisticsObject.save(function (err, logisticsObject) {
             if (err) {
-              res.statusCode = 500;
-              res.setHeader('Content-Type', 'application/json');
-              res.json({ err: err });
+              utils.createError(res, 500, err);
               return;
             }
             res.statusCode = 201;
@@ -111,15 +118,11 @@ loRouter.route('/')
             res.json(logisticsObject);
           });
         } else {
-          res.statusCode = 403;
-          res.setHeader('Content-Type', 'application/json');
-          res.json({ message: 'Cannot add: this company is not the one under which the logged in user is registered.' });
+          utils.createError(res, 403, 'Cannot add: this company is not the one under which the logged in user is registered.');
         }
       }, (err) => next(err))
       .catch((err) => {
-        res.statusCode = 404;
-        res.setHeader('Content-Type', 'application/json');
-        res.json({ message: 'CompanyId not found.' });
+        utils.createError(res, 404, 'CompanyId not found.');
         return;
       });
   })
@@ -142,10 +145,9 @@ loRouter.route('/')
    *     parameters:
    *       - in: path
    *         name: companyId
-   *         schema:
-   *           type: string
-   *         required:
-   *           - companyId
+   *         description: Id of the company
+   *         type: string
+   *         required: true
    *     responses:
    *       '200':
    *         description: Logistics objects returned
@@ -179,28 +181,24 @@ loRouter.route('/')
             }, (err) => next(err))
             .catch((err) => next(err));
         } else {
-          res.statusCode = 403;
-          res.setHeader('Content-Type', 'application/json');
-          res.json({ message: 'Cannot retrieve logistics object: this company is not the one under which the logged in user is registered.' });
+          utils.createError(res, 403, 'Cannot retrieve logistics object: this company is not the one under which the logged in user is registered.');
         }
       }, (err) => next(err))
       .catch((err) => {
-        res.statusCode = 404;
-        res.setHeader('Content-Type', 'application/json');
-        res.json({ message: 'CompanyId not found.' });
+        utils.createError(res, 404, 'CompanyId not found.');
         return;
       });
   })
 
   .delete(cors.cors, auth.user, (res) => {
-    res.statusCode = 405;
+    utils.createError(res, 405, 'DELETE operation not supported for this endpoint.');
     res.end('DELETE operation not supported for this endpoint');
   });
 
 loRouter.route('/:loId')
   .options(cors.cors, (req, res) => { res.sendStatus(200); })
   .put(cors.cors, auth.user, (res) => {
-    res.statusCode = 405;
+    utils.createError(res, 405, 'PUT operation not supported for this endpoint.');
     res.end('PUT operation not supported for this endpoint');
   })
 
@@ -222,16 +220,14 @@ loRouter.route('/:loId')
   *     parameters:
   *       - in: path
   *         name: companyId
-  *         schema:
-  *           type: string
-  *         required:
-  *           - companyId
+  *         description: Id of the company
+  *         type: string
+  *         required: true
   *       - in: path
   *         name: loId
-  *         schema:
-  *           type: string
-  *         required:
-  *           - loId
+  *         description: Id of logistics object
+  *         type: string
+  *         required: true
   *     responses:
   *       '200':
   *         description: Logistics object
@@ -250,22 +246,18 @@ loRouter.route('/:loId')
               res.setHeader('Content-Type', 'application/json');
               res.json(lo);
             } else {
-              res.statusCode = 404;
-              res.setHeader('Content-Type', 'application/json');
-              res.json({ message: 'LoId not found.' });
+              utils.createError(res, 404, 'LoId not found.');
             }
           }, (err) => next(err))
           .catch((err) => next(err));
       }, (err) => next(err))
       .catch((err) => {
-        res.statusCode = 404;
-        res.setHeader('Content-Type', 'application/json');
-        res.json({ message: 'CompanyId not found.' });
+        utils.createError(res, 404, 'CompanyId not found.');
         return;
       });
   })
 
-  /**
+/**
  * @swagger
  * /companies/{companyId}/los/{loId}:
  *   patch:
@@ -283,21 +275,19 @@ loRouter.route('/:loId')
  *     parameters:
  *       - in: path
  *         name: companyId
- *         schema:
- *           type: string
- *         required:
- *           - companyId
+ *         description: Id of the company
+ *         type: string
+ *         required: true
  *       - in: path
-*         name: loId
-*         schema:
-*           type: string
-*         required:
-*           - loId
- *       - name: body
+ *         name: loId
+ *         description: Id of logistics object
+ *         type: string
+ *         required: true
+ *       - name: logisticsObject
  *         in: body
- *         description: Content of a logistics object to update (only fields to update).
- *         schema:
- *           type: object
+ *         description: Content of a logistics object to update (only fields to update)
+ *         required: true
+ *         type: object
  *     responses:
  *       '200':
  *         description: Logistics object updated successfully
@@ -314,7 +304,6 @@ loRouter.route('/:loId')
         if (company.companyId === req.user.companyId) {
           Lo.findOne({ companyId: req.params.companyId, loId: req.params.loId })
             .then((lo) => {
-
               if (req.body['@id']) {
                 delete req.body['@id'];
               }
@@ -336,7 +325,6 @@ loRouter.route('/:loId')
                 }
               }
 
-
               lo.save();
 
               res.statusCode = 200;
@@ -345,15 +333,11 @@ loRouter.route('/:loId')
             }, (err) => next(err))
             .catch((err) => next(err));
         } else {
-          res.statusCode = 403;
-          res.setHeader('Content-Type', 'application/json');
-          res.json({ message: 'Cannot retrieve logistics object: this company is not the one under which the logged in user is registered.' });
+          utils.createError(res, 403, 'Cannot retrieve logistics object: this company is not the one under which the logged in user is registered.');
         }
       }, (err) => next(err))
       .catch((err) => {
-        res.statusCode = 404;
-        res.setHeader('Content-Type', 'application/json');
-        res.json({ message: 'CompanyId not found.' });
+        utils.createError(res, 404, 'CompanyId not found.');
         return;
       });
   })
@@ -376,16 +360,14 @@ loRouter.route('/:loId')
  *     parameters:
  *       - in: path
  *         name: companyId
- *         schema:
- *           type: string
- *         required:
- *           - companyId
+ *         description: Id of the company
+ *         type: string
+ *         required: true
  *       - in: path
-*         name: loId
-*         schema:
-*           type: string
-*         required:
-*           - loId
+ *         name: loId
+ *         description: Id of logistics object
+ *         type: string
+ *         required: true
  *     responses:
  *       '200':
  *         description: Logistics object deleted successfully
@@ -402,9 +384,7 @@ loRouter.route('/:loId')
         if (company.companyId === req.user.companyId) {
           Lo.findOne({ loId: req.params.loId }, function (err, loToDelete) {
             if (err) {
-              res.setHeader('Content-Type', 'application/json');
-              res.statusCode = 404;
-              res.json({ status: 'Cannot find any logistics object to be deleted with the given loId' });
+              utils.createError(res, 404, 'Cannot find any logistics object to be deleted with the given loId');
             } else {
               Lo.deleteOne(loToDelete)
                 .then((resp) => {
@@ -416,29 +396,55 @@ loRouter.route('/:loId')
             }
           });
         } else {
-          res.statusCode = 403;
-          res.setHeader('Content-Type', 'application/json');
-          res.json({ message: 'Cannot delete: This logistics object is not belonging to the company under which the logged in user is registered.' });
+          utils.createError(res, 403, 'Cannot delete: This logistics object is not belonging to the company under which the logged in user is registered.');
         }
       }, (err) => next(err))
       .catch((err) => {
-        res.statusCode = 404;
-        res.setHeader('Content-Type', 'application/json');
-        res.json({ message: 'CompanyId not found.' });
+        utils.createError(res, 404, 'CompanyId not found.');
         return;
       });
   });
 
-function postContent(bodyToPost, subscriberHost) {
-  request.post(
-    subscriberHost,
-    { json: bodyToPost },
-    function (error, response, body) {
+function getSubscriberInformation(subscriber, typeOfLo, callback) {
+  request.get({
+    url: subscriber.serverInformationEndpoint + "?topic=" + typeOfLo,
+    headers: {
+      'x-api-key': subscriber.keyForServerInformationEndpoint
+    },
+  }, (error, response, body) => {
+    if (!error && response.statusCode == 200) {
+      callback(JSON.parse(body));
+    } else {
+      console.log("Unable to retrieve subscriber information " + error);
+    }
+  }
+  );
+}
+
+function postContentToSubscriber(bodyToPost, responseFromSubscriber, typeOfLo) {
+  request.post({
+    url: responseFromSubscriber.callbackUrl + "?topic=" + typeOfLo,
+    headers: {
+      'x-api-key': responseFromSubscriber.secret,
+      'Content-Type': responseFromSubscriber.contentType[0],
+      'Resource-Type': typeOfLo,
+      'Orig-Request-Method': 'POST'
+    },
+    body: JSON.stringify(bodyToPost),
+  },
+    function (error, response) {
       if (!error && response.statusCode == 200) {
-        console.log("Logistics object successfully sent to subscriber " + subscriberHost);
+        console.log("Logistics object successfully sent to subscriber " + responseFromSubscriber.callbackUrl);
+      } else {
+        console.log("Unable to send logistics object to subscriber " + responseFromSubscriber.callbackUrl + " errorCode: " + response.statusCode + " error:" + error);
       }
     }
   );
+}
+
+function getIdFromUrl(url) {
+  var pieces = url.split("/");
+  return pieces[pieces.length-1];
 }
 
 function isArray(what) {

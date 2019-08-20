@@ -1,113 +1,218 @@
 {
-	"@context": {
-		"@vocab": "http://cargo.iata.org#"
-   },
-   "@id": "123-1234567",
-   "@type": "Airwaybill",
-   "url": "somenonmandatoryurl",
-	"AirWaybillNumber": "123-1234567",
-	"Date": "xxxxxxxx",
-	"LoadTypeCode": "xxxxxxxx",
-	"FlagConsolDirectLC": "xxxxxxxx",
-	"AccountInformationCode": "xxxxxxxx",
-	"AccountInformationDescription": "xxxxxxxx",
-	"PaymentMethodCode": "xxxxxxxx",
-	"ServiceCode": "xxxxxxxx",
-	"AirlineProductIdentifier": "xxxxxxxx",
-	"AirlineProductName": "xxxxxxxx",
-	"ExternalReference": "xxxxxxxx",
-	"OriginDestination": "xxxxxxxx",
-	"Shipper": "xxxxxxxx",
-	"Consignee": "xxxxxxxx",
-	"FreightForwarder": "xxxxxxxx",
-	"OtherParty": "xxxxxxxx",
-	"Carrier": "xxxxxxxx",
-	"Routing": "xxxxxxxx",
-	"WaybillLine": "xxxxxxxx",
-	"WaybillLineTotals": "xxxxxxxx",
-	"Handling": "xxxxxxxx",
-	"CustomsInformation": "xxxxxxxx",
-	"SecurityInformation": "xxxxxxxx",
-	"Insurance": "xxxxxxxx",
-	"ChargeDeclaration": {
-		"WeightValuationChargePaymen": "xxxxxxxx",
-		"OtherChargesPayment": "xxxxxxxx",
-		"Carriage": {
-			"NoCarriageValue": "xxxxxxxx",
-			"Amount": "xxxxxxxx"
+		"@context": {
+			"@vocab": "http://cargo.iata.org#"
 		},
-		"Customs": {
-			"NoCustomsValue": "xxxxxxxx",
-			"Amount": "xxxxxxxx"
+		"@id": "http://www.onerecordcargo.org/companies/wtg/los/618-87654321",
+		"@type": "Airwaybill",
+		"AirWaybillNumber": "618-12345678",
+		"Date": "2019-08-01T00:00:00",
+		"AccountInformationCode": "GEN",
+		"AccountInformationDescription": "CAN AEAX7TMNH",
+		"PaymentMethodCode": "PP",
+		"OriginDestination": {
+			"DepartureLocation": {
+				"Code": "SYD"
+			},
+			"ArrivalLocation": {
+				"Code": "AKL"
+			},
+			"BookingStatus": []
 		},
-		"Insurance": {
-			"NoInsuranceValue": "xxxxxxxx",
-			"Amount": "xxxxxxxx"
-		}
-	},
-	"OtherCharge": [{
-		"ChargeDescription": {
-			"Code": "xxxxxxxx",
-			"SubCode": "xxxxxxxx",
-			"Description": "xxxxxxxx",
-			"LocationIndicator": "xxxxxxxx"
+		"Shipper": {
+			"Name": "CT FREIGHT - SYDNEY BRANCH",
+			"IATACargoAgentCode": 0,
+			"Branch": [
+				{
+					"BranchName": null,
+					"IATACargoAgentLocationIdentifier": 0,
+					"Location": {
+						"Address": {
+							"Street": "2-4 BRADFORD STREET",
+							"PostalCode": "2015",
+							"CityName": "ALEXANDRIA",
+							"RegionName": "NSW",
+							"CountryCode": "AU"
+						}
+					},
+					"ContactPerson": {
+						"ContactDetails": [
+							{
+								"PhoneNumber": "61283378888"
+							}
+						]
+					}
+				}
+			]
 		},
-		"SpecialService": {
-			"Description": "xxxxxxxx",
-			"DateTime": "xxxxxxxx"
+		"Consignee": {
+			"Name": "CT FREIGHT NZ LTD",
+			"IATACargoAgentCode": 0,
+			"Branch": [
+				{
+					"IATACargoAgentLocationIdentifier": 0,
+					"Location": {
+						"Address": {
+							"Street": "11 TOM PEARCE DRIVE AUCKLAND INTERN",
+							"PostalCode": "2022",
+							"CityName": "AUCKLAND",
+							"RegionName": "AUK",
+							"CountryCode": "NZ"
+						}
+					},
+					"ContactPerson": {
+						"ContactDetails": [
+							{
+								"PhoneNumber": "6492751634"
+							}
+						]
+					}
+				}
+			]
 		},
-		"ChargePayment": {
-			"ByTime": "xxxxxxxx",
-			"ByItemQuantity": "xxxxxxxx",
-			"Amount": "xxxxxxxx",
-			"DueParty": "xxxxxxxx",
-			"PrepaidCollectIndicator": "xxxxxxxx"
-		}
-	}],
-	"ChargeSummary": {
-		"Prepaid": {
-			"TotalWeightCharges": "xxxxxxxx",
-			"TotalValuationCharges": "xxxxxxxx",
-			"TotalTaxes": "xxxxxxxx",
-			"TotalOtherChargesDueAgent": "xxxxxxxx",
-			"TotalOtherChargesDueCarrier": "xxxxxxxx",
-			"TotalPrepaidCharges": "xxxxxxxx"
+		"FreightForwarder": {
+			"Name": "C.T. FREIGHT PTY LTD",
+			"IATACargoAgentCode": 230871,
+			"Branch": [
+				{
+					"IATACargoAgentLocationIdentifier": 2125,
+					"Location": {
+						"Address": {
+							"CityName": "ALEXANDRIA"
+						}
+					}
+				}
+			]
 		},
-		"Collect": {
-			"TotalWeightCharges": "xxxxxxxx",
-			"TotalValuationCharges": "xxxxxxxx",
-			"TotalTaxes": "xxxxxxxx",
-			"TotalOtherChargesDueAgent": "xxxxxxxx",
-			"TotalOtherChargesDueCarrier": "xxxxxxxx",
-			"TotalCollectCharges": "xxxxxxxx",
-			"InDestinationCurrency": {
-				"TotalCharges": "xxxxxxxx",
-				"CollectionCharge": "xxxxxxxx",
-				"GrandTotalCollectCharges": "xxxxxxxx"
+		"Routing": {
+			"Date": "2019-06-01T00:00:00",
+			"SegmentDetail": {
+				"ArrivalLocation": {
+					"Code": "AKL",
+					"Name": "SQ"
+				},
+				"BookingStatus": [],
+				"TransportIdentifier": "SQ7296"
+			}
+		},
+		"WaybillLine": {
+			"PieceDetails": {
+				"Weight": {
+					"GrossWeight": {
+						"Value": "3472",
+						"Unit": "KGM"
+					}
+				},
+				"VolumetricWeight": {
+					"ChargeableWeight": {
+						"Value": "3472",
+						"Unit": "KGM"
+					}
+				},
+				"NoDimensionAvailable": "NDA",
+				"ContainedPieceCount": 0,
+				"SLAC": 0,
+				"ULD": {
+					"Type": "PMC",
+					"SerialNumber": "58467",
+					"OwnerCode": "SQ"
+				}
+			},
+			"RatingDetails": {
+				"RateClassCode": "Q",
+				"CommodityItemNumber": "0000",
+				"RatingTypeIndicator": "F",
+				"RCP": "2",
+				"RateChargeAmount": {
+					"Value": "2.5",
+					"Unit": null
+				},
+				"SubTotalAmount": {
+					"Value": "8680",
+					"Unit": "AUD"
+				}
+			}
+		},
+		"Handling": {
+			"SpecialHandling": [
+				{
+					"Code": "SPX"
+				},
+				{
+					"Code": "EAP"
+				}
+			],
+			"ServiceRequest": []
+		},
+		"CustomsInformation": {
+			"OtherCustomsInformation": [
+				{
+					"CountryCode": "AU",
+					"CustomsSubjectCode": "ISS",
+					"CustomsContentCode": "RA",
+					"CustomsInformation": "00039-01"
+				},
+				{
+					"CustomsContentCode": "ED",
+					"CustomsInformation": "0124"
+				},
+				{
+					"CustomsContentCode": "SM",
+					"CustomsInformation": "XRY"
+				},
+				{
+					"CustomsContentCode": "SN",
+					"CustomsInformation": "KAREN JONES"
+				},
+				{
+					"CustomsContentCode": "SD",
+					"CustomsInformation": "31MAY191740"
+				}
+			]
+		},
+		"ChargeDeclaration": {
+			"WeightValuationChargePayment": "true",
+			"OtherChargesPayment": "true",
+			"Carriage": {
+				"NoCarriageValue": "NVD"
+			},
+			"Customs": {
+				"NoCustomsValue": "NCV"
+			},
+			"Insurance": {
+				"NoInsuranceValue": "XXX"
+			}
+		},
+		"OtherCharge": [],
+		"ChargeSummary": {
+			"Prepaid": {
+				"TotalWeightCharges": {
+					"Value": "8680",
+					"Unit": "AUD"
+				},
+				"TotalPrepaidCharges": {
+					"Value": "8680",
+					"Unit": "AUD"
+				}
+			}
+		},
+		"ShipperSignature": {
+			"SignatoryName": "C.T. FREIGHT PTY LTD",
+			"Date": "0001-01-01T00:00:00"
+		},
+		"CarrierSignature": {
+			"SignatoryName": "KAREN JONES",
+			"Date": "2019-05-31T00:00:00",
+			"Location": {
+				"Name": "ALEXANDRIA"
+			}
+		},
+		"TotalPieceCount": 2,
+		"TotalSLAC": 0,
+		"TotalULDCount": 0,
+		"TotalGrossWeight": {
+			"GrossWeight": {
+				"Value": "3472",
+				"Unit": "KGM"
 			}
 		}
-	},
-	"ShipperSignature": {
-		"SignatoryName": "xxxxxxxx",
-		"SignatoryCompany": "xxxxxxxx",
-		"Date": "xxxxxxxx",
-		"Signature": "xxxxxxxx",
-		"Location": "xxxxxxxx"
-	},
-	"CarrierSignature": {
-		"SignatoryName": "xxxxxxxx",
-		"SignatoryCompany": "xxxxxxxx",
-		"Date": "xxxxxxxx",
-		"Signature": "xxxxxxxx",
-		"Location": "xxxxxxxx"
-	},
-	"TotalPieceCount": "xxxxxxxx",
-	"TotalSLAC": "xxxxxxxx",
-	"TotalULDCount": "xxxxxxxx",
-	"TotalNetWeight": "xxxxxxxx",
-	"TotalTareWeight": "xxxxxxxx",
-	"TotalGrossWeight": "xxxxxxxx",
-	"TotalChargeableWeight": "xxxxxxxx",
-	"TotalVolume": "xxxxxxxx",
-	"TotalChargeAmount": "xxxxxxxx"
 }
