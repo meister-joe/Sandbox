@@ -78,6 +78,10 @@ app.use(passport.initialize());
 
 // Set Swagger API documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+app.get('/api-docs.json', (req, res) => {  
+  res.setHeader('Content-Type', 'application/json');  
+  res.status(200).json(specs);  
+}); 
 
 app.use('/', indexRouter);
 app.use('/companies', companyRouter);
