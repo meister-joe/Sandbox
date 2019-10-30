@@ -1,11 +1,11 @@
 module.exports = {
-    'secretKey': '',
-    'mongoUrl': '',
-    'subscriptionKey': '',
+    'secretKey': 'mySecreTKey',
+    'mongoUrl': 'mongodb://localhost:27017',
+    'subscriptionKey': 'subSecretKEY',
     'url': '',
     'companyName': '',
     'IATACargoAgentCode': '',
     'cacheFor': 0,
-    'serverOwnSecret': '',
-    'keyForServerInformation': ''
+    'serverOwnSecret': 'serverOWNSECRetKey',
+    'keyForServerInformation': 'serverOWNSECRetKeyINFO'
 }
